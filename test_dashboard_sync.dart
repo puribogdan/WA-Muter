@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'lib/providers/schedule_provider.dart';
 import 'lib/core/services/storage_service.dart';
 
@@ -22,13 +21,13 @@ Future<void> main() async {
   
   // Test 2: Set start time (simulates user setting time in schedule screen)
   print('\n2. Setting start time to 09:00...');
-  await scheduleProvider.setStartTime(TimeOfDay(hour: 9, minute: 0));
+  await scheduleProvider.setStartTime(const TimeOfDay(hour: 9, minute: 0));
   print('   Has schedule: ${scheduleProvider.hasSchedule}');
   print('   Start time: ${scheduleProvider.startTime?.hour}:${scheduleProvider.startTime?.minute.toString().padLeft(2, '0')}');
   
   // Test 3: Set end time (completes the schedule)
   print('\n3. Setting end time to 17:00...');
-  await scheduleProvider.setEndTime(TimeOfDay(hour: 17, minute: 0));
+  await scheduleProvider.setEndTime(const TimeOfDay(hour: 17, minute: 0));
   print('   Has schedule: ${scheduleProvider.hasSchedule}');
   print('   Schedule preview: "${scheduleProvider.schedulePreview}"');
   print('   Duration: ${scheduleProvider.getDurationHours()} hours');
@@ -39,7 +38,7 @@ Future<void> main() async {
   final scheduleProvider2 = ScheduleProvider();
   
   // Small delay to ensure storage is completed
-  await Future.delayed(Duration(milliseconds: 100));
+  await Future.delayed(const Duration(milliseconds: 100));
   
   print('   Has schedule: ${scheduleProvider2.hasSchedule}');
   print('   Schedule preview: "${scheduleProvider2.schedulePreview}"');
@@ -51,13 +50,13 @@ Future<void> main() async {
   print('   Before change - Preview: "${scheduleProvider2.schedulePreview}"');
   
   // Change the schedule
-  await scheduleProvider2.setStartTime(TimeOfDay(hour: 22, minute: 0));
+  await scheduleProvider2.setStartTime(const TimeOfDay(hour: 22, minute: 0));
   print('   After changing start time - Preview: "${scheduleProvider2.schedulePreview}"');
   
   // Test results
   print('\n=== Test Results ===');
   if (scheduleProvider2.hasSchedule && 
-      scheduleProvider2.schedulePreview == "22:00 - 17:00" &&
+      scheduleProvider2.schedulePreview == '22:00 - 17:00' &&
       scheduleProvider2.getDurationHours() == 19) {
     print('✅ SUCCESS: Dashboard schedule sync works correctly!');
     print('   - Schedule persists across provider instances');

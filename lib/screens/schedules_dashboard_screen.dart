@@ -2,8 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../core/models/mute_schedule.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/mute_log_provider.dart';
+import '../providers/schedules_provider.dart';
 import '../theme/app_tokens.dart';
 import 'schedule_editor_screen.dart';
 
@@ -16,8 +18,6 @@ class SchedulesDashboardScreen extends StatefulWidget {
 }
 
 class _SchedulesDashboardScreenState extends State<SchedulesDashboardScreen> {
-  bool _isNextScheduleEnabled = true;
-
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -94,58 +94,52 @@ class _SchedulesDashboardScreenState extends State<SchedulesDashboardScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.cardGap),
-          _SurfaceCard(
-            shadow: cardShadow,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'Next Schedule: ',
-                              style: AppTypography.cardTitle
-                                  .copyWith(color: tokens.textPrimary),
-                            ),
-                            TextSpan(
-                              text: 'Quiet Night',
-                              style: AppTypography.cardTitle.copyWith(
-                                color: tokens.textPrimary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+          Consumer<SchedulesProvider>(
+            builder: (context, schedulesProvider, _) {
+              final schedules = schedulesProvider.schedules;
+              final enabledCount = schedules.where((s) => s.enabled).length;
+              return _SurfaceCard(
+                shadow: cardShadow,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'All Schedules',
+                            style: AppTypography.sectionHeader
+                                .copyWith(color: tokens.textPrimary),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
+                        Text(
+                          '${schedules.length} total - $enabledCount on',
+                          style: AppTypography.rowSecondary
+                              .copyWith(color: tokens.textSecondary),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (schedulesProvider.isLoading)
+                      const Center(child: CircularProgressIndicator())
+                    else if (schedules.isEmpty)
                       Text(
-                        'Mon - Fri   22:00 - 08:00   3 Groups',
-                        style: AppTypography.cardSubtitle
+                        'No schedules yet. Create one to start muting selected users/groups.',
+                        style: AppTypography.rowSecondary
                             .copyWith(color: tokens.textSecondary),
+                      )
+                    else
+                      ..._buildScheduleRows(
+                        context,
+                        tokens,
+                        schedulesProvider,
+                        schedules,
+                        isDark,
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Transform.scale(
-                  scale: 1.1,
-                  child: CupertinoSwitch(
-                    value: _isNextScheduleEnabled,
-                    activeColor: isDark ? tokens.primaryAccent : tokens.success,
-                    trackColor: tokens.outline,
-                    onChanged: (value) {
-                      setState(() {
-                        _isNextScheduleEnabled = value;
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.cardGap),
           _SurfaceCard(
@@ -208,6 +202,85 @@ class _SchedulesDashboardScreenState extends State<SchedulesDashboardScreen> {
         builder: (_) => const ScheduleEditorScreen(),
       ),
     );
+  }
+
+  List<Widget> _buildScheduleRows(
+    BuildContext context,
+    AppColorTokens tokens,
+    SchedulesProvider provider,
+    List<MuteSchedule> schedules,
+    bool isDark,
+  ) {
+    final rows = <Widget>[];
+    for (var i = 0; i < schedules.length; i++) {
+      final schedule = schedules[i];
+      rows.add(
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ScheduleEditorScreen(scheduleId: schedule.id),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          schedule.name,
+                          style: AppTypography.rowPrimary
+                              .copyWith(color: tokens.textPrimary),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${schedule.daysSummary} - ${schedule.getFormattedTime()}',
+                          style: AppTypography.rowSecondary
+                              .copyWith(color: tokens.textSecondary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${schedule.groups.length} muted users/groups',
+                          style: AppTypography.rowSecondary
+                              .copyWith(color: tokens.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Transform.scale(
+                scale: 1.0,
+                child: CupertinoSwitch(
+                  value: schedule.enabled,
+                  activeColor: isDark ? tokens.primaryAccent : tokens.success,
+                  trackColor: tokens.outline,
+                  onChanged: provider.isLoading
+                      ? null
+                      : (value) => provider.setEnabled(schedule.id, value),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (i != schedules.length - 1) {
+        rows.add(Divider(height: 1, color: tokens.outline));
+      }
+    }
+    return rows;
   }
 
   List<Widget> _buildMuteRows(BuildContext context, AppColorTokens tokens) {

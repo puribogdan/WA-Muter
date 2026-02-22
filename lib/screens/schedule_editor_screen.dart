@@ -126,23 +126,96 @@ class _ScheduleEditorScreenState extends State<ScheduleEditorScreen> {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Groups',
+                  const Text('Muted Users / Groups',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _groupSearchController,
                     onChanged: (_) => setState(() {}),
                     decoration: const InputDecoration(
-                      hintText: 'Search groups',
+                      hintText: 'Search users/groups',
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: filteredGroups.isEmpty
+                            ? null
+                            : () {
+                                setState(() {
+                                  _selectedGroups.addAll(filteredGroups);
+                                });
+                              },
+                        icon: const Icon(Icons.select_all),
+                        label: const Text('Select all shown'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _selectedGroups.isEmpty
+                            ? null
+                            : () {
+                                setState(() {
+                                  if (query.isEmpty) {
+                                    _selectedGroups.clear();
+                                  } else {
+                                    _selectedGroups.removeWhere(
+                                      (g) => filteredGroups.contains(g),
+                                    );
+                                  }
+                                });
+                              },
+                        icon: const Icon(Icons.clear_all),
+                        label: Text(
+                          query.isEmpty ? 'Clear selected' : 'Clear shown',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${_selectedGroups.length} selected',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  if (_selectedGroups.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: (_selectedGroups.toList()..sort())
+                          .take(8)
+                          .map(
+                            (group) => InputChip(
+                              label: Text(group),
+                              onDeleted: () {
+                                setState(() {
+                                  _selectedGroups.remove(group);
+                                });
+                              },
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    if (_selectedGroups.length > 8) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '+${_selectedGroups.length - 8} more selected',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                  ],
                   ...filteredGroups.map(
                     (group) => CheckboxListTile(
                       value: _selectedGroups.contains(group),
                       title: Text(group),
+                      subtitle: const Text('Detected from notifications or added manually'),
                       onChanged: (checked) {
                         setState(() {
                           if (checked == true) {
@@ -157,7 +230,7 @@ class _ScheduleEditorScreenState extends State<ScheduleEditorScreen> {
                   TextButton.icon(
                     onPressed: _showAddManualGroupDialog,
                     icon: const Icon(Icons.add),
-                    label: const Text('Add manually'),
+                    label: const Text('Add user/group manually'),
                   ),
                   const SizedBox(height: 80),
                 ],
@@ -198,7 +271,12 @@ class _ScheduleEditorScreenState extends State<ScheduleEditorScreen> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Enter group name'),
-          content: TextField(controller: controller),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'WhatsApp user or group name',
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -236,7 +314,7 @@ class _ScheduleEditorScreenState extends State<ScheduleEditorScreen> {
       return;
     }
     if (_selectedGroups.isEmpty) {
-      _showError('Select at least one group');
+      _showError('Select at least one user/group');
       return;
     }
 

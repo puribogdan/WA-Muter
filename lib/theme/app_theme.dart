@@ -82,14 +82,14 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: tokens.cardSurface,
         indicatorColor: tokens.secondarySurface,
-        iconTheme: MaterialStateProperty.resolveWith((states) {
-          final selected = states.contains(MaterialState.selected);
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
           return IconThemeData(
             color: selected ? tokens.primaryAccent : tokens.inactiveIcon,
           );
         }),
-        labelTextStyle: MaterialStateProperty.resolveWith((states) {
-          final selected = states.contains(MaterialState.selected);
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
           return AppTypography.cardSubtitle.copyWith(
             color: selected ? tokens.primaryAccent : tokens.inactiveIcon,
           );
@@ -103,12 +103,12 @@ class AppTheme {
         ),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) return Colors.white;
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Colors.white;
           return tokens.inactiveIcon;
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return isDark ? tokens.primaryAccent : tokens.success;
           }
           return tokens.outline;

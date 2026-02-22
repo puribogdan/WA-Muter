@@ -17,13 +17,13 @@ Future<void> main() async {
   
   // Set just start time
   print('Setting start time to 09:00...');
-  await provider.setStartTime(TimeOfDay(hour: 9, minute: 0));
+  await provider.setStartTime(const TimeOfDay(hour: 9, minute: 0));
   print('Start time: ${provider.startTime?.hour}:${provider.startTime?.minute.toString().padLeft(2, '0')}');
   print('Has schedule: ${provider.hasSchedule}');
   
   // Set just end time
   print('\nSetting end time to 17:00...');
-  await provider.setEndTime(TimeOfDay(hour: 17, minute: 0));
+  await provider.setEndTime(const TimeOfDay(hour: 17, minute: 0));
   print('End time: ${provider.endTime?.hour}:${provider.endTime?.minute.toString().padLeft(2, '0')}');
   print('Has schedule: ${provider.hasSchedule}');
   
@@ -32,7 +32,7 @@ Future<void> main() async {
   final provider2 = ScheduleProvider();
   
   // Small delay to ensure storage is completed
-  await Future.delayed(Duration(milliseconds: 100));
+  await Future.delayed(const Duration(milliseconds: 100));
   
   print('New provider start time: ${provider2.startTime?.hour}:${provider2.startTime?.minute.toString().padLeft(2, '0')}');
   print('New provider end time: ${provider2.endTime?.hour}:${provider2.endTime?.minute.toString().padLeft(2, '0')}');
@@ -41,8 +41,8 @@ Future<void> main() async {
   // Test 4: Test overnight schedule
   print('\n4. Testing overnight schedule...');
   await provider2.clearSchedule();
-  await provider2.setStartTime(TimeOfDay(hour: 22, minute: 0));
-  await provider2.setEndTime(TimeOfDay(hour: 8, minute: 0));
+  await provider2.setStartTime(const TimeOfDay(hour: 22, minute: 0));
+  await provider2.setEndTime(const TimeOfDay(hour: 8, minute: 0));
   
   print('Overnight schedule: ${provider2.schedulePreview}');
   print('Duration: ${provider2.getDurationHours()} hours');
@@ -50,7 +50,7 @@ Future<void> main() async {
   // Test 5: Final persistence test
   print('\n5. Final persistence test...');
   final provider3 = ScheduleProvider();
-  await Future.delayed(Duration(milliseconds: 100));
+  await Future.delayed(const Duration(milliseconds: 100));
   
   print('Final provider start time: ${provider3.startTime?.hour}:${provider3.startTime?.minute.toString().padLeft(2, '0')}');
   print('Final provider end time: ${provider3.endTime?.hour}:${provider3.endTime?.minute.toString().padLeft(2, '0')}');
