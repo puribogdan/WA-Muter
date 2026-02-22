@@ -306,6 +306,18 @@ class NativePreferencesBridge {
             }
         }
 
+        fun shouldHideMutedNotifications(context: Context): Boolean {
+            return try {
+                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val raw = prefs.getString(APP_SETTINGS_KEY, "{}") ?: "{}"
+                val obj = org.json.JSONObject(raw)
+                // Default to true to preserve current app behavior (dismiss/hide).
+                obj.optBoolean("hideMutedInsteadOfSilence", true)
+            } catch (_: Exception) {
+                true
+            }
+        }
+
         fun appendMuteLog(context: Context, groupName: String, status: String) {
             try {
                 val trimmed = groupName.trim()

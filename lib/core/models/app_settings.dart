@@ -5,7 +5,7 @@ class AppSettings {
 
   const AppSettings({
     this.masterMuteEnabled = true,
-    this.hideMutedInsteadOfSilence = false,
+    this.hideMutedInsteadOfSilence = true,
     this.keepMutedLog = true,
   });
 
@@ -34,7 +34,7 @@ class AppSettings {
     return AppSettings(
       masterMuteEnabled: json['masterMuteEnabled'] as bool? ?? true,
       hideMutedInsteadOfSilence:
-          json['hideMutedInsteadOfSilence'] as bool? ?? false,
+          json['hideMutedInsteadOfSilence'] as bool? ?? true,
       keepMutedLog: json['keepMutedLog'] as bool? ?? true,
     );
   }

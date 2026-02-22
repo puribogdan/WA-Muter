@@ -39,10 +39,12 @@ class SettingsScreen extends StatelessWidget {
               ),
               const _SectionTitle('Behavior'),
               SwitchListTile(
-                title: const Text('Hide muted notifications instead of silencing'),
-                subtitle: const Text('Native hide/dismiss mode is currently the only supported mode'),
+                title: const Text('Hide muted notifications (dismiss)'),
+                subtitle: const Text(
+                  'Turn off to keep them visible in the notification bar. Note: Android listener mode cannot force true silent-only on all devices.',
+                ),
                 value: settings.hideMutedInsteadOfSilence,
-                onChanged: null,
+                onChanged: settingsProvider.setHideMutedInsteadOfSilence,
               ),
               SwitchListTile(
                 title: const Text('Keep muted notification log'),
