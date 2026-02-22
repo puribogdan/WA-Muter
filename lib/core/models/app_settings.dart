@@ -4,7 +4,7 @@ class AppSettings {
 
   const AppSettings({
     this.hideMutedInsteadOfSilence = false,
-    this.keepMutedLog = false,
+    this.keepMutedLog = true,
   });
 
   AppSettings copyWith({
@@ -29,7 +29,7 @@ class AppSettings {
     return AppSettings(
       hideMutedInsteadOfSilence:
           json['hideMutedInsteadOfSilence'] as bool? ?? false,
-      keepMutedLog: json['keepMutedLog'] as bool? ?? false,
+      keepMutedLog: json['keepMutedLog'] as bool? ?? true,
     );
   }
 }

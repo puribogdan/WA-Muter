@@ -289,9 +289,9 @@ class NativePreferencesBridge {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val raw = prefs.getString(APP_SETTINGS_KEY, "{}") ?: "{}"
                 val obj = org.json.JSONObject(raw)
-                obj.optBoolean("keepMutedLog", false)
+                obj.optBoolean("keepMutedLog", true)
             } catch (_: Exception) {
-                false
+                true
             }
         }
 
