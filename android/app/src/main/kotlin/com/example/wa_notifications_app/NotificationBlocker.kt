@@ -32,6 +32,7 @@ object NotificationBlocker {
 
     fun shouldBlockNotification(context: Context, packageName: String?, title: String?): Boolean {
         if (!isWhatsAppNotification(packageName)) return false
+        if (!NativePreferencesBridge.isMasterMuteEnabled(context)) return false
         val notificationTitle = title?.trim().orEmpty()
         if (notificationTitle.isEmpty()) return false
 

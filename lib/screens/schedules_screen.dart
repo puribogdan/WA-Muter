@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/app_settings_provider.dart';
 import '../providers/schedules_provider.dart';
 import '../widgets/schedule_card.dart';
 import 'schedule_editor_screen.dart';
@@ -9,8 +10,8 @@ class SchedulesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SchedulesProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<SchedulesProvider, AppSettingsProvider>(
+      builder: (context, provider, appSettings, _) {
         if (provider.isLoading) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -26,29 +27,38 @@ class SchedulesScreen extends StatelessWidget {
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemBuilder: (context, index) {
-                    final schedule = provider.schedules[index];
-                    return Dismissible(
-                      key: ValueKey(schedule.id),
-                      background: _swipeBg(context, Icons.copy, 'Duplicate'),
-                      secondaryBackground:
-                          _swipeBg(context, Icons.delete, 'Delete', end: true),
-                      confirmDismiss: (direction) async {
-                        if (direction == DismissDirection.startToEnd) {
-                          await provider.duplicate(schedule.id);
-                          return false;
-                        }
-                        if (direction == DismissDirection.endToStart) {
-                          await provider.delete(schedule.id);
-                          return true;
-                        }
-                        return false;
-                      },
-                      child: ScheduleCard(
-                        schedule: schedule,
-                        onToggle: (value) =>
-                            provider.setEnabled(schedule.id, value),
-                        onTap: () => _openEditor(context, scheduleId: schedule.id),
-                      ),
+                    if (index == 0) {
+                      return Column(
+                        children: [
+                          SwitchListTile(
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                            ),
+                            title: const Text('Master Mute'),
+                            subtitle: Text(
+                              appSettings.settings.masterMuteEnabled
+                                  ? 'Scheduled muting is enabled'
+                                  : 'All muting is paused',
+                            ),
+                            value: appSettings.settings.masterMuteEnabled,
+                            onChanged: appSettings.isLoading
+                                ? null
+                                : appSettings.setMasterMuteEnabled,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildScheduleRow(context, provider, provider.schedules[0]),
+                        ],
+                      );
+                    }
+                    return _buildScheduleRow(
+                      context,
+                      provider,
+                      provider.schedules[index],
                     );
                   },
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -60,6 +70,34 @@ class SchedulesScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildScheduleRow(
+    BuildContext context,
+    SchedulesProvider provider,
+    dynamic schedule,
+  ) {
+    return Dismissible(
+      key: ValueKey(schedule.id),
+      background: _swipeBg(context, Icons.copy, 'Duplicate'),
+      secondaryBackground: _swipeBg(context, Icons.delete, 'Delete', end: true),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          await provider.duplicate(schedule.id);
+          return false;
+        }
+        if (direction == DismissDirection.endToStart) {
+          await provider.delete(schedule.id);
+          return true;
+        }
+        return false;
+      },
+      child: ScheduleCard(
+        schedule: schedule,
+        onToggle: (value) => provider.setEnabled(schedule.id, value),
+        onTap: () => _openEditor(context, scheduleId: schedule.id),
+      ),
     );
   }
 

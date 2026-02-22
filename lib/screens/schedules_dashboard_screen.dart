@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../providers/app_settings_provider.dart';
 import '../providers/mute_log_provider.dart';
 import '../theme/app_tokens.dart';
 import 'schedule_editor_screen.dart';
@@ -50,6 +51,49 @@ class _SchedulesDashboardScreenState extends State<SchedulesDashboardScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.pagePadding),
         children: [
+          Consumer<AppSettingsProvider>(
+            builder: (context, appSettings, _) => _SurfaceCard(
+              shadow: cardShadow,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Master Mute',
+                          style: AppTypography.cardTitle
+                              .copyWith(color: tokens.textPrimary),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          appSettings.settings.masterMuteEnabled
+                              ? 'Scheduled muting is enabled'
+                              : 'Muting is globally paused',
+                          style: AppTypography.cardSubtitle
+                              .copyWith(color: tokens.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Transform.scale(
+                    scale: 1.1,
+                    child: CupertinoSwitch(
+                      value: appSettings.settings.masterMuteEnabled,
+                      activeColor:
+                          isDark ? tokens.primaryAccent : tokens.success,
+                      trackColor: tokens.outline,
+                      onChanged: appSettings.isLoading
+                          ? null
+                          : (value) => appSettings.setMasterMuteEnabled(value),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.cardGap),
           _SurfaceCard(
             shadow: cardShadow,
             child: Row(

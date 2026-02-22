@@ -295,6 +295,17 @@ class NativePreferencesBridge {
             }
         }
 
+        fun isMasterMuteEnabled(context: Context): Boolean {
+            return try {
+                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val raw = prefs.getString(APP_SETTINGS_KEY, "{}") ?: "{}"
+                val obj = org.json.JSONObject(raw)
+                obj.optBoolean("masterMuteEnabled", true)
+            } catch (_: Exception) {
+                true
+            }
+        }
+
         fun appendMuteLog(context: Context, groupName: String, status: String) {
             try {
                 val trimmed = groupName.trim()

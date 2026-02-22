@@ -27,6 +27,12 @@ class AppSettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setMasterMuteEnabled(bool value) async {
+    _settings = _settings.copyWith(masterMuteEnabled: value);
+    await _service.saveSettings(_settings);
+    notifyListeners();
+  }
+
   Future<void> setKeepMutedLog(bool value) async {
     _settings = _settings.copyWith(keepMutedLog: value);
     await _service.saveSettings(_settings);
