@@ -1,0 +1,330 @@
+package com.example.wa_notifications_app
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.util.Log
+import java.text.SimpleDateFormat
+import java.util.*
+
+/**
+ * Native notification blocking utility that works independently of Flutter
+ * This eliminates the dependency on Flutter communication when the app is closed
+ */
+object NotificationBlocker {
+    
+    private const val TAG = "NotificationBlocker"
+    
+    // SharedPreferences keys (must match Flutter app)
+    private const val SELECTED_GROUPS_KEY = "selected_groups"
+    private const val SCHEDULE_START_HOUR_KEY = "schedule_start_hour"
+    private const val SCHEDULE_START_MINUTE_KEY = "schedule_start_minute"
+    private const val SCHEDULE_END_HOUR_KEY = "schedule_end_hour"
+    private const val SCHEDULE_END_MINUTE_KEY = "schedule_end_minute"
+    private const val HAS_PARTIAL_SCHEDULE_KEY = "has_partial_schedule"
+    
+    // WhatsApp package names (must match Flutter app)
+    private const val WHATSAPP_PACKAGE = "com.whatsapp"
+    private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
+    
+    // Notification data keys (from NotificationEvent.data map)
+    private const val NOTIFICATION_PACKAGE_NAME = "package_name"
+    private const val NOTIFICATION_TITLE = "title"
+    private const val NOTIFICATION_ACTIONS = "actions"
+    
+    /**
+     * Data class to hold schedule information
+     */
+    data class ScheduleData(val startHour: Int, val startMinute: Int, val endHour: Int, val endMinute: Int)
+    
+    /**
+     * Check if a notification should be blocked based on group and schedule
+     * Returns true if the notification should be blocked, false otherwise
+     */
+    fun shouldBlockNotification(context: Context, packageName: String?, title: String?): Boolean {
+        try {
+            Log.d(TAG, "🔍 [NATIVE] Checking if notification should be blocked")
+            Log.d(TAG, "📦 [NATIVE] Package: $packageName")
+            Log.d(TAG, "📝 [NATIVE] Title: $title")
+            
+            // Step 1: Check if it's a WhatsApp notification
+            if (!isWhatsAppNotification(packageName)) {
+                Log.d(TAG, "✅ [NATIVE] Not a WhatsApp notification - allowing through")
+                return false
+            }
+            
+            // Step 2: Check if notification is from a muted group
+            val isFromMutedGroup = isFromMutedGroup(context, title)
+            if (!isFromMutedGroup) {
+                Log.d(TAG, "✅ [NATIVE] Not from muted group - allowing through")
+                return false
+            }
+            
+            // Step 3: Check if we're within the mute schedule
+            val isWithinSchedule = isWithinSchedule(context)
+            if (!isWithinSchedule) {
+                Log.d(TAG, "⏰ [NATIVE] Outside mute schedule - allowing through")
+                return false
+            }
+            
+            Log.d(TAG, "🛑 [NATIVE] Should BLOCK notification - all conditions met")
+            return true
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ [NATIVE] Error checking if should block: $e")
+            // On error, don't block (fail-safe)
+            return false
+        }
+    }
+    
+    /**
+     * Block a notification by dismissing it
+     * Returns true if blocking was attempted, false if no dismiss action found
+     */
+    fun blockNotification(notificationEvent: NotificationEvent): Boolean {
+        try {
+            Log.d(TAG, "🛑 [NATIVE] Attempting to block notification")
+            Log.d(TAG, "📝 [NATIVE] Title: ${notificationEvent.data[NOTIFICATION_TITLE]}")
+            Log.d(TAG, "📦 [NATIVE] Package: ${notificationEvent.data[NOTIFICATION_PACKAGE_NAME]}")
+            
+            val actions = notificationEvent.data[NOTIFICATION_ACTIONS] as? List<*>
+            if (actions != null && actions.isNotEmpty()) {
+                for (action in actions) {
+                    if (action is Map<*, *>) {
+                        val actionTitle = action["title"] as? String ?: ""
+                        val semantic = action["semantic"] as? Int ?: -1
+                        
+                        Log.d(TAG, "🔍 [NATIVE] Action: $actionTitle (semantic: $semantic)")
+                        
+                        // Semantic 2 = dismiss/cancel action
+                        if (semantic == 2) {
+                            Log.d(TAG, "🛑 [NATIVE] Found dismiss action, attempting to cancel...")
+                            
+                            // Call the tap method through reflection since we can't access it directly
+                            val notificationActions = notificationEvent.mSbn.notification.actions
+                            if (notificationActions != null) {
+                                for (act in notificationActions) {
+                                    if (act.title.toString() == actionTitle && act.semanticAction == 2) {
+                                        act.actionIntent.send()
+                                        Log.d(TAG, "✅ [NATIVE] NOTIFICATION CANCELED SUCCESSFULLY")
+                                        Log.d(TAG, "🎯 [NATIVE] SUCCESS: Muted group notification blocked during schedule!")
+                                        return true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Log.w(TAG, "⚠️ [NATIVE] NO DISMISS ACTION FOUND")
+            Log.d(TAG, "📢 [NATIVE] Actions count: ${actions?.size ?: 0}")
+            Log.d(TAG, "❌ [NATIVE] FAILURE: Could not block notification - no dismiss action available")
+            return false
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ [NATIVE] Error blocking notification: $e")
+            return false
+        }
+    }
+    
+    /**
+     * Check if the notification is from WhatsApp
+     */
+    private fun isWhatsAppNotification(packageName: String?): Boolean {
+        return packageName == WHATSAPP_PACKAGE || packageName == WHATSAPP_BUSINESS_PACKAGE
+    }
+    
+    /**
+     * Check if notification is from a muted group
+     */
+    private fun isFromMutedGroup(context: Context, title: String?): Boolean {
+        if (title.isNullOrBlank()) {
+            Log.d(TAG, "📝 [NATIVE] No title provided - cannot check group")
+            return false
+        }
+        
+        val selectedGroups = getSelectedGroups(context)
+        if (selectedGroups.isEmpty()) {
+            Log.d(TAG, "📝 [NATIVE] No muted groups configured")
+            return false
+        }
+        
+        Log.d(TAG, "🔍 [NATIVE] Checking against ${selectedGroups.size} muted groups")
+        
+        for (groupName in selectedGroups) {
+            if (title.contains(groupName, ignoreCase = true)) {
+                Log.d(TAG, "🎯 [NATIVE] Group '$groupName' found in notification title")
+                return true
+            }
+        }
+        
+        Log.d(TAG, "📝 [NATIVE] No matching groups found in title")
+        return false
+    }
+    
+    /**
+     * Check if current time is within the mute schedule
+     */
+    private fun isWithinSchedule(context: Context): Boolean {
+        val schedule = getSchedule(context) ?: run {
+            Log.d(TAG, "⏰ [NATIVE] No schedule set - allowing notifications")
+            return false
+        }
+        
+        val now = Calendar.getInstance()
+        val nowMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        val startMinutes = schedule.startHour * 60 + schedule.startMinute
+        val endMinutes = schedule.endHour * 60 + schedule.endMinute
+        
+        val formattedSchedule = String.format("%02d:%02d - %02d:%02d", 
+            schedule.startHour, schedule.startMinute, schedule.endHour, schedule.endMinute)
+        val formattedNow = String.format("%02d:%02d", 
+            now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE))
+        
+        Log.d(TAG, "⏰ [NATIVE] Schedule: $formattedSchedule")
+        Log.d(TAG, "🕐 [NATIVE] Current time: $formattedNow")
+        
+        val withinSchedule = if (startMinutes <= endMinutes) {
+            // Same day range (e.g., 09:00 - 17:00)
+            nowMinutes >= startMinutes && nowMinutes < endMinutes
+        } else {
+            // Overnight range (e.g., 22:00 - 08:00)
+            nowMinutes >= startMinutes || nowMinutes < endMinutes
+        }
+        
+        Log.d(TAG, "⏰ [NATIVE] Within schedule: $withinSchedule")
+        return withinSchedule
+    }
+    
+    /**
+     * Get selected groups from SharedPreferences - with multiple fallback approaches
+     * Returns list of group names that should be muted
+     */
+    private fun getSelectedGroups(context: Context): List<String> {
+        val possiblePrefsNames = arrayOf(
+            "SharedPreferences",  // Most common for Flutter shared_preferences
+            "${context.packageName}_preferences",  // Package-specific
+            "flutter_shared_preferences",  // Original approach
+            "com.example.wa_notifications_app_preferences"  // Full package name
+        )
+        
+        for (prefsName in possiblePrefsNames) {
+            try {
+                Log.d(TAG, "📝 [NATIVE] Trying SharedPreferences file: $prefsName")
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                
+                // Try both getString and getStringSet approaches
+                val groupsList = prefs.getStringSet(SELECTED_GROUPS_KEY, emptySet())
+                val groupsString = prefs.getString(SELECTED_GROUPS_KEY, null)
+                
+                var resultGroups = emptyList<String>()
+                
+                if (groupsList != null && groupsList.isNotEmpty()) {
+                    resultGroups = groupsList.toList()
+                    Log.d(TAG, "✅ [NATIVE] Found groups via StringSet from $prefsName: $resultGroups")
+                    return resultGroups
+                }
+                
+                if (!groupsString.isNullOrEmpty()) {
+                    // Try to parse as JSON array
+                    try {
+                        val groups = groupsString.trim()
+                        if (groups.startsWith("[") && groups.endsWith("]")) {
+                            // Parse JSON array
+                            val jsonArray = org.json.JSONArray(groups)
+                            val parsedGroups = mutableListOf<String>()
+                            for (i in 0 until jsonArray.length()) {
+                                parsedGroups.add(jsonArray.getString(i))
+                            }
+                            if (parsedGroups.isNotEmpty()) {
+                                resultGroups = parsedGroups
+                                Log.d(TAG, "✅ [NATIVE] Found groups via JSON string from $prefsName: $resultGroups")
+                                return resultGroups
+                            }
+                        } else {
+                            // Single group as string
+                            resultGroups = listOf(groupsString)
+                            Log.d(TAG, "✅ [NATIVE] Found single group via string from $prefsName: $resultGroups")
+                            return resultGroups
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "⚠️ [NATIVE] Failed to parse groups string: $groupsString")
+                    }
+                }
+                
+                Log.d(TAG, "📝 [NATIVE] No groups found in $prefsName")
+                
+            } catch (e: Exception) {
+                Log.d(TAG, "⚠️ [NATIVE] Error accessing $prefsName: $e")
+            }
+        }
+        
+        Log.e(TAG, "❌ [NATIVE] Could not find selected groups in any SharedPreferences file")
+        return emptyList()
+    }
+    
+    /**
+     * Get schedule from SharedPreferences with multiple fallback approaches
+     * Returns null if no schedule is set
+     * Returns ScheduleData with start/end hour/minute
+     */
+    private fun getSchedule(context: Context): ScheduleData? {
+        val possiblePrefsNames = arrayOf(
+            "SharedPreferences",
+            "${context.packageName}_preferences",
+            "flutter_shared_preferences",
+            "com.example.wa_notifications_app_preferences"
+        )
+        
+        for (prefsName in possiblePrefsNames) {
+            try {
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                
+                val startHour = prefs.getInt(SCHEDULE_START_HOUR_KEY, -1)
+                val startMinute = prefs.getInt(SCHEDULE_START_MINUTE_KEY, -1)
+                val endHour = prefs.getInt(SCHEDULE_END_HOUR_KEY, -1)
+                val endMinute = prefs.getInt(SCHEDULE_END_MINUTE_KEY, -1)
+                
+                // Check if all values are present
+                if (startHour >= 0 && startMinute >= 0 && endHour >= 0 && endMinute >= 0) {
+                    Log.d(TAG, "✅ [NATIVE] Found schedule from $prefsName: ${startHour}:${startMinute} - ${endHour}:${endMinute}")
+                    return ScheduleData(startHour, startMinute, endHour, endMinute)
+                }
+                
+                Log.d(TAG, "📝 [NATIVE] No complete schedule in $prefsName")
+                
+            } catch (e: Exception) {
+                Log.d(TAG, "⚠️ [NATIVE] Error accessing schedule from $prefsName: $e")
+            }
+        }
+        
+        Log.e(TAG, "❌ [NATIVE] Could not find schedule in any SharedPreferences file")
+        return null
+    }
+    
+    /**
+     * Debug function to log current state
+     */
+    fun logDebugState(context: Context) {
+        try {
+            val selectedGroups = getSelectedGroups(context)
+            val schedule = getSchedule(context)
+            
+            Log.d(TAG, "🔍 [NATIVE DEBUG] Current state:")
+            Log.d(TAG, "📝 [NATIVE DEBUG] Muted groups: ${selectedGroups.size}")
+            for (group in selectedGroups) {
+                Log.d(TAG, "   - $group")
+            }
+            
+            if (schedule != null) {
+                Log.d(TAG, "⏰ [NATIVE DEBUG] Schedule: ${String.format("%02d:%02d - %02d:%02d", 
+                    schedule.startHour, schedule.startMinute, schedule.endHour, schedule.endMinute)}")
+                Log.d(TAG, "⏰ [NATIVE DEBUG] Within schedule: ${isWithinSchedule(context)}")
+            } else {
+                Log.d(TAG, "⏰ [NATIVE DEBUG] No schedule set")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ [NATIVE] Error logging debug state: $e")
+        }
+    }
+}

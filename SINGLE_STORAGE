@@ -1,0 +1,77 @@
+# Single Storage Architecture Analysis
+
+## Current Dual Storage Problem
+The current architecture maintains two separate SharedPreferences locations:
+1. **Flutter's SharedPreferences** - Used by Flutter UI
+2. **Android's SharedPreferences** - Used by native service (works when app is closed)
+
+### Issues with Dual Storage:
+- ❌ **Complexity**: Requires synchronization between two locations
+- ❌ **Inconsistency Risk**: Potential for data drift between stores
+- ❌ **Race Conditions**: Sync timing issues
+- ❌ **Maintenance Overhead**: More code to maintain and debug
+
+## Single Storage Solution
+
+### Recommended Architecture:
+**Use Android's SharedPreferences as the single source of truth** for these critical reasons:
+
+1. **App Independence**: Native service works even when Flutter app is closed
+2. **Reliability**: No sync failures or timing issues
+3. **Simplicity**: Single data source, no synchronization needed
+4. **Performance**: No sync overhead or MethodChannel calls for every read
+
+### Implementation Approach:
+
+#### Option 1: Flutter Reads from Native Storage (RECOMMENDED)
+```dart
+// Modify StorageService to read from native storage
+static Future<MuteSchedule?> getSchedule() async {
+  try {
+    // Read directly from native SharedPreferences
+    final scheduleData = await NativeBridge.getSchedule();
+    
+    if (scheduleData != null) {
+      return MuteSchedule(
+        startTime: TimeOfDay(hour: scheduleData['startHour'], minute: scheduleData['startMinute']),
+        endTime: TimeOfDay(hour: scheduleData['endHour'], minute: scheduleData['endMinute']),
+      );
+    }
+    return null;
+  } catch (e) {
+    print('[StorageService] Error loading schedule: $e');
+    return null;
+  }
+}
+```
+
+#### Option 2: Add getSchedule Method to Native Bridge
+```kotlin
+// Add to NativePreferencesBridge.kt
+"getSchedule" -> {
+    try {
+        val schedule = getSchedule(context)
+        result.success(schedule)
+    } catch (e: Exception) {
+        Log.e(TAG, "Error getting schedule: $e")
+        result.error("GET_SCHEDULE_ERROR", e.message, null)
+    }
+}
+```
+
+## Benefits of Single Storage:
+- ✅ **Single Source of Truth**: No sync inconsistencies
+- ✅ **Always Current**: Native service always has latest data
+- ✅ **Simpler Code**: No sync mechanisms needed
+- ✅ **Better Reliability**: Fewer failure points
+- ✅ **App Closure Resilience**: Service works independently
+
+## Migration Strategy:
+1. **Add getSchedule method** to NativeBridge
+2. **Modify StorageService.getSchedule()** to read from native storage
+3. **Keep StorageService.saveSchedule()** to write to native storage
+4. **Remove Flutter SharedPreferences** usage for critical data
+5. **Test thoroughly** to ensure compatibility
+
+This approach eliminates the synchronization problem entirely by having the Flutter app read directly from the native storage that the service uses.
+
