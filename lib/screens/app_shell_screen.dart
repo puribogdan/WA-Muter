@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'groups_screen.dart';
-import 'schedules_screen.dart';
+import 'schedules_dashboard_screen.dart';
 import 'settings_screen.dart';
 
 class AppShellScreen extends StatefulWidget {
@@ -14,7 +14,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
   int _currentIndex = 0;
 
   static const _tabs = [
-    SchedulesScreen(),
+    SchedulesDashboardScreen(),
     GroupsScreen(),
     SettingsScreen(),
   ];
