@@ -242,44 +242,35 @@ class NotificationsHandlerService: MethodChannel.MethodCallHandler, Notification
                     if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] Should block result: $shouldBlock")
                     
                     if (shouldBlock) {
-                        val hideMutedNotifications = NativePreferencesBridge.shouldHideMutedNotifications(mContext)
-                        if (!hideMutedNotifications) {
-                            if (debugLogging) {
-                                Log.d(TAG, "[SERVICE] Matched mute rule, but hide/dismiss is OFF")
-                                Log.d(TAG, "[DEBUG] Leaving notification visible (listener mode cannot force silent-only)")
-                            }
-                            maybeAppendMuteLog(title, "Visible")
+                        if (debugLogging) Log.d(TAG, "ðŸ›‘ [SERVICE] Step 2: Notification should be blocked - attempting to dismiss...")
+                        
+                        // Step 3: Try to block the notification
+                        val blocked = NotificationBlocker.blockNotification(evt)
+                        if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] Block notification result: $blocked")
+                        
+                        if (blocked) {
+                            if (debugLogging) Log.d(TAG, "âœ… [SERVICE] SUCCESS: Notification blocked successfully via native logic")
+                            maybeAppendMuteLog(title, "Dismissed")
                         } else {
-                            if (debugLogging) Log.d(TAG, "ðŸ›‘ [SERVICE] Step 2: Notification should be blocked - attempting to dismiss...")
+                            Log.w(TAG, "âš ï¸ [SERVICE] FAILED: Could not block notification - no dismiss action found")
+                            maybeAppendMuteLog(title, "Muted")
                             
-                            // Step 3: Try to block the notification
-                            val blocked = NotificationBlocker.blockNotification(evt)
-                            if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] Block notification result: $blocked")
-                            
-                            if (blocked) {
-                                if (debugLogging) Log.d(TAG, "âœ… [SERVICE] SUCCESS: Notification blocked successfully via native logic")
-                                maybeAppendMuteLog(title, "Dismissed")
-                            } else {
-                                Log.w(TAG, "âš ï¸ [SERVICE] FAILED: Could not block notification - no dismiss action found")
-                                maybeAppendMuteLog(title, "Muted")
-                                
-                                // **EXTRA DEBUG: Analyze why blocking failed**
-                                if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] Analyzing blocking failure...")
-                                val actions = evt.data["actions"] as? List<*>
-                                if (actions != null && actions.isNotEmpty()) {
-                                    if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] Actions available but none had semantic=2 (dismiss)")
-                                    actions.forEachIndexed { index, action ->
-                                        if (action is Map<*, *>) {
-                                            val title = action["title"] as? String ?: "Unknown"
-                                            val semantic = action["semantic"] as? Int ?: -1
-                                            if (debugLogging) {
-                                                Log.d(TAG, "ðŸ” [DEBUG] Action $index: '$title' (semantic: $semantic) - NOT dismissable")
-                                            }
+                            // **EXTRA DEBUG: Analyze why blocking failed**
+                            if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] Analyzing blocking failure...")
+                            val actions = evt.data["actions"] as? List<*>
+                            if (actions != null && actions.isNotEmpty()) {
+                                if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] Actions available but none had semantic=2 (dismiss)")
+                                actions.forEachIndexed { index, action ->
+                                    if (action is Map<*, *>) {
+                                        val title = action["title"] as? String ?: "Unknown"
+                                        val semantic = action["semantic"] as? Int ?: -1
+                                        if (debugLogging) {
+                                            Log.d(TAG, "ðŸ” [DEBUG] Action $index: '$title' (semantic: $semantic) - NOT dismissable")
                                         }
                                     }
-                                } else {
-                                    if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] No actions available on notification")
                                 }
+                            } else {
+                                if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] No actions available on notification")
                             }
                         }
                     } else {
