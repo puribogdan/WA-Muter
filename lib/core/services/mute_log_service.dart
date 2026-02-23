@@ -16,6 +16,7 @@ class MuteLogService {
           timestamp: DateTime.fromMillisecondsSinceEpoch(millis),
           groupName: (e['groupName'] as String?) ?? 'Unknown',
           status: (e['status'] as String?) ?? 'Muted',
+          messageText: (e['messageText'] as String?) ?? '',
         );
       }).toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -45,11 +46,16 @@ class MuteLogService {
   Future<void> add({
     required String groupName,
     required String status,
+    String? messageText,
   }) async {
     final trimmed = groupName.trim();
     if (trimmed.isEmpty) return;
 
-    await NativeBridge.saveMuteLog(groupName: trimmed, status: status);
+    await NativeBridge.saveMuteLog(
+      groupName: trimmed,
+      status: status,
+      messageText: messageText,
+    );
 
     // Keep fallback local storage for compatibility.
     final all = await getAll();
@@ -59,6 +65,7 @@ class MuteLogService {
         timestamp: DateTime.now(),
         groupName: trimmed,
         status: status,
+        messageText: messageText ?? '',
       ),
     );
 
@@ -67,6 +74,31 @@ class MuteLogService {
     await prefs.setString(
       _key,
       jsonEncode(trimmedList.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  Future<void> clearToday() async {
+    final now = DateTime.now();
+
+    await NativeBridge.clearTodayMuteLogs();
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_key);
+    if (raw == null || raw.isEmpty) return;
+
+    final data = (jsonDecode(raw) as List<dynamic>)
+        .map((e) => MuteLogEntry.fromJson(e as Map<String, dynamic>))
+        .where((e) {
+          final isToday = e.timestamp.year == now.year &&
+              e.timestamp.month == now.month &&
+              e.timestamp.day == now.day;
+          return !isToday;
+        })
+        .toList();
+
+    await prefs.setString(
+      _key,
+      jsonEncode(data.map((e) => e.toJson()).toList()),
     );
   }
 }

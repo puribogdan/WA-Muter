@@ -89,11 +89,13 @@ class NativeBridge {
   static Future<void> saveMuteLog({
     required String groupName,
     required String status,
+    String? messageText,
   }) async {
     try {
       await _channel.invokeMethod('saveMuteLog', {
         'groupName': groupName,
         'status': status,
+        'messageText': messageText ?? '',
       });
     } catch (e) {
       print('[NativeBridge] Error saving mute log: $e');
@@ -113,6 +115,14 @@ class NativeBridge {
     } catch (e) {
       print('[NativeBridge] Error getting mute logs: $e');
       return [];
+    }
+  }
+
+  static Future<void> clearTodayMuteLogs() async {
+    try {
+      await _channel.invokeMethod('clearTodayMuteLogs');
+    } catch (e) {
+      print('[NativeBridge] Error clearing today mute logs: $e');
     }
   }
 

@@ -4,11 +4,13 @@ class MuteLogEntry {
   final DateTime timestamp;
   final String groupName;
   final String status; // Muted / Dismissed
+  final String messageText;
 
   const MuteLogEntry({
     required this.timestamp,
     required this.groupName,
     required this.status,
+    this.messageText = '',
   });
 
   Map<String, dynamic> toJson() {
@@ -16,6 +18,7 @@ class MuteLogEntry {
       'timestamp': timestamp.toIso8601String(),
       'groupName': groupName,
       'status': status,
+      'messageText': messageText,
     };
   }
 
@@ -24,6 +27,7 @@ class MuteLogEntry {
       timestamp: DateTime.parse(json['timestamp'] as String),
       groupName: (json['groupName'] as String?) ?? 'Unknown',
       status: (json['status'] as String?) ?? 'Muted',
+      messageText: (json['messageText'] as String?) ?? '',
     );
   }
 

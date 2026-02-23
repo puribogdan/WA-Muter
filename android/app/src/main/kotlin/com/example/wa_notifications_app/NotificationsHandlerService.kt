@@ -43,6 +43,8 @@ class NotificationsHandlerService: MethodChannel.MethodCallHandler, Notification
     // Track if service is already in foreground mode to prevent duplicate notifications
     private var isInForegroundMode = false
     private var hasInitializedFlutterLoader = false
+    private val recentMuteLogFingerprints = HashMap<String, Long>()
+    private val recentMuteLogContentFingerprints = HashMap<String, Long>()
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: MethodChannel.Result) {
       when (call.method) {
@@ -229,6 +231,7 @@ class NotificationsHandlerService: MethodChannel.MethodCallHandler, Notification
                 // Extract notification data
                 val packageName = evt.data["package_name"] as? String
                 val title = evt.data["title"] as? String
+                val text = evt.data["text"] as? String
                 
                 if (debugLogging) {
                     Log.d(TAG, "ðŸ” [DEBUG] Package name: '$packageName'")
@@ -250,10 +253,10 @@ class NotificationsHandlerService: MethodChannel.MethodCallHandler, Notification
                         
                         if (blocked) {
                             if (debugLogging) Log.d(TAG, "âœ… [SERVICE] SUCCESS: Notification blocked successfully via native logic")
-                            maybeAppendMuteLog(title, "Dismissed")
+                            maybeAppendMuteLog(evt, title, text, "Dismissed")
                         } else {
                             Log.w(TAG, "âš ï¸ [SERVICE] FAILED: Could not block notification - no dismiss action found")
-                            maybeAppendMuteLog(title, "Muted")
+                            maybeAppendMuteLog(evt, title, text, "Muted")
                             
                             // **EXTRA DEBUG: Analyze why blocking failed**
                             if (debugLogging) Log.d(TAG, "ðŸ” [DEBUG] Analyzing blocking failure...")
@@ -662,10 +665,60 @@ class NotificationsHandlerService: MethodChannel.MethodCallHandler, Notification
         }
     }
 
-    private fun maybeAppendMuteLog(title: String?, status: String) {
+    private fun maybeAppendMuteLog(
+        evt: NotificationEvent,
+        title: String?,
+        messageText: String?,
+        status: String
+    ) {
         if (!NativePreferencesBridge.shouldKeepMuteLog(mContext)) return
+        val isGroupSummary = (evt.data["isGroup"] as? Boolean) == true
+        if (isGroupSummary) {
+            if (isDebugLoggingEnabled()) {
+                Log.d(TAG, "[MUTE_LOG] Skipping group summary notification log for ${evt.uid}")
+            }
+            return
+        }
         val logGroupName = if (title.isNullOrBlank()) "Unknown" else title
-        NativePreferencesBridge.appendMuteLog(mContext, logGroupName, status)
+        val normalizedText = messageText?.trim().orEmpty()
+        val fingerprint = buildString {
+            append(evt.uid)
+            append('|')
+            append(logGroupName.trim().lowercase())
+            append('|')
+            append(normalizedText.lowercase())
+        }
+        val contentFingerprint = buildString {
+            append(logGroupName.trim().lowercase())
+            append('|')
+            append(normalizedText.lowercase())
+        }
+        val now = System.currentTimeMillis()
+        val lastLoggedAt = recentMuteLogFingerprints[fingerprint]
+        if (lastLoggedAt != null && (now - lastLoggedAt) <= 10_000L) {
+            if (isDebugLoggingEnabled()) {
+                Log.d(TAG, "[MUTE_LOG] Skipping duplicate mute log entry for ${evt.uid}")
+            }
+            return
+        }
+        val lastContentLoggedAt = recentMuteLogContentFingerprints[contentFingerprint]
+        if (lastContentLoggedAt != null && (now - lastContentLoggedAt) <= 10_000L) {
+            if (isDebugLoggingEnabled()) {
+                Log.d(TAG, "[MUTE_LOG] Skipping duplicate content log for ${evt.uid}")
+            }
+            return
+        }
+        recentMuteLogFingerprints[fingerprint] = now
+        recentMuteLogContentFingerprints[contentFingerprint] = now
+        if (recentMuteLogFingerprints.size > 200) {
+            val cutoff = now - 60_000L
+            recentMuteLogFingerprints.entries.removeAll { it.value < cutoff }
+        }
+        if (recentMuteLogContentFingerprints.size > 200) {
+            val cutoff = now - 60_000L
+            recentMuteLogContentFingerprints.entries.removeAll { it.value < cutoff }
+        }
+        NativePreferencesBridge.appendMuteLog(mContext, logGroupName, status, normalizedText)
     }
 
     private fun isDebugLoggingEnabled(): Boolean {

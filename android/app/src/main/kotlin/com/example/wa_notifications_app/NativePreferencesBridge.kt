@@ -6,6 +6,7 @@ import android.content.pm.ApplicationInfo
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import java.util.Calendar
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -94,7 +95,8 @@ class NativePreferencesBridge {
                         try {
                             val groupName = call.argument<String>("groupName") ?: ""
                             val status = call.argument<String>("status") ?: "Muted"
-                            appendMuteLog(context, groupName, status)
+                            val messageText = call.argument<String>("messageText") ?: ""
+                            appendMuteLog(context, groupName, status, messageText)
                             result.success(true)
                         } catch (e: Exception) {
                             Log.e(TAG, "Error saving mute log: $e")
@@ -127,6 +129,15 @@ class NativePreferencesBridge {
                         } catch (e: Exception) {
                             Log.e(TAG, "Error getting mute logs: $e")
                             result.error("GET_MUTE_LOGS_ERROR", e.message, null)
+                        }
+                    }
+                    "clearTodayMuteLogs" -> {
+                        try {
+                            clearTodayMuteLogs(context)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error clearing today's mute logs: $e")
+                            result.error("CLEAR_TODAY_MUTE_LOGS_ERROR", e.message, null)
                         }
                     }
                     else -> {
@@ -306,10 +317,11 @@ class NativePreferencesBridge {
             }
         }
 
-        fun appendMuteLog(context: Context, groupName: String, status: String) {
+        fun appendMuteLog(context: Context, groupName: String, status: String, messageText: String = "") {
             try {
                 val trimmed = groupName.trim()
                 if (trimmed.isEmpty()) return
+                val preview = messageText.trim()
 
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val existingRaw = prefs.getString(MUTE_LOGS_KEY, "[]") ?: "[]"
@@ -319,6 +331,7 @@ class NativePreferencesBridge {
                 entry.put("timestamp", System.currentTimeMillis())
                 entry.put("groupName", trimmed)
                 entry.put("status", status)
+                entry.put("messageText", preview)
                 val updated = org.json.JSONArray()
                 updated.put(entry)
                 for (i in 0 until array.length()) {
@@ -335,6 +348,7 @@ class NativePreferencesBridge {
                         "timestamp" to System.currentTimeMillis(),
                         "groupName" to trimmed,
                         "status" to status,
+                        "messageText" to preview,
                     )
                 )
             } catch (e: Exception) {
@@ -369,6 +383,7 @@ class NativePreferencesBridge {
                             "timestamp" to obj.optLong("timestamp", 0L),
                             "groupName" to obj.optString("groupName", "Unknown"),
                             "status" to obj.optString("status", "Muted"),
+                            "messageText" to obj.optString("messageText", ""),
                         )
                     )
                 }
@@ -376,6 +391,31 @@ class NativePreferencesBridge {
                 Log.e(TAG, "âŒ Error reading mute logs: $e")
             }
             return result
+        }
+
+        private fun clearTodayMuteLogs(context: Context) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val existingRaw = prefs.getString(MUTE_LOGS_KEY, "[]") ?: "[]"
+            val array = org.json.JSONArray(existingRaw)
+            val now = Calendar.getInstance()
+            val updated = org.json.JSONArray()
+
+            for (i in 0 until array.length()) {
+                val obj = array.optJSONObject(i) ?: continue
+                val timestamp = obj.optLong("timestamp", 0L)
+                if (!isSameLocalDay(timestamp, now)) {
+                    updated.put(obj)
+                }
+            }
+
+            prefs.edit().putString(MUTE_LOGS_KEY, updated.toString()).apply()
+        }
+
+        private fun isSameLocalDay(timestampMillis: Long, now: Calendar): Boolean {
+            if (timestampMillis <= 0L) return false
+            val tsCal = Calendar.getInstance().apply { timeInMillis = timestampMillis }
+            return tsCal.get(Calendar.YEAR) == now.get(Calendar.YEAR) &&
+                tsCal.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR)
         }
     }
 }

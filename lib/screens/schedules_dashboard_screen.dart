@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../core/models/mute_log_entry.dart';
 import '../core/models/mute_schedule.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/mute_log_provider.dart';
@@ -18,6 +19,8 @@ class SchedulesDashboardScreen extends StatefulWidget {
 }
 
 class _SchedulesDashboardScreenState extends State<SchedulesDashboardScreen> {
+  final Set<String> _expandedMuteGroups = <String>{};
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -172,19 +175,32 @@ class _SchedulesDashboardScreenState extends State<SchedulesDashboardScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.cardGap),
-          _SurfaceCard(
-            shadow: cardShadow,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Today's Mutes",
-                  style: AppTypography.sectionHeader
-                      .copyWith(color: tokens.textPrimary),
-                ),
-                const SizedBox(height: 12),
-                ..._buildMuteRows(context, tokens),
-              ],
+          Consumer<MuteLogProvider>(
+            builder: (context, muteLogProvider, _) => _SurfaceCard(
+              shadow: cardShadow,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Today's Mutes",
+                          style: AppTypography.sectionHeader
+                              .copyWith(color: tokens.textPrimary),
+                        ),
+                      ),
+                      if (muteLogProvider.todayEntries.isNotEmpty)
+                        TextButton(
+                          onPressed: () => _confirmClearTodayMutes(context),
+                          child: const Text('Clear'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ..._buildMuteRows(context, tokens),
+                ],
+              ),
             ),
           ),
         ],
@@ -202,6 +218,29 @@ class _SchedulesDashboardScreenState extends State<SchedulesDashboardScreen> {
         builder: (_) => const ScheduleEditorScreen(),
       ),
     );
+  }
+
+  Future<void> _confirmClearTodayMutes(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Clear today's mutes?"),
+        content: const Text('This removes only today\'s mute log entries.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+    await context.read<MuteLogProvider>().clearToday();
   }
 
   List<Widget> _buildScheduleRows(
@@ -294,55 +333,199 @@ class _SchedulesDashboardScreenState extends State<SchedulesDashboardScreen> {
       ];
     }
 
+    final groups = _groupMuteEntries(entries);
     final rows = <Widget>[];
-    final visible = entries.take(10).toList();
     final formatter = DateFormat('HH:mm');
-    for (var i = 0; i < visible.length; i++) {
-      final item = visible[i];
+    for (var i = 0; i < groups.length; i++) {
+      final group = groups[i];
+      final isExpanded = _expandedMuteGroups.contains(group.senderKey);
+      final latest = group.entries.first;
+      final latestMessage = latest.messageText.trim();
+
       rows.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 56,
-                child: Text(
-                  formatter.format(item.timestamp),
-                  style: AppTypography.rowPrimary.copyWith(
-                    color: tokens.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+        Column(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                setState(() {
+                  if (isExpanded) {
+                    _expandedMuteGroups.remove(group.senderKey);
+                  } else {
+                    _expandedMuteGroups.add(group.senderKey);
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.groupName,
-                      style:
-                          AppTypography.rowPrimary.copyWith(color: tokens.textPrimary),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  group.senderName,
+                                  style: AppTypography.rowPrimary.copyWith(
+                                    color: tokens.textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${group.entries.length}x',
+                                style: AppTypography.rowSecondary.copyWith(
+                                  color: tokens.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                formatter.format(latest.timestamp),
+                                style: AppTypography.rowSecondary.copyWith(
+                                  color: tokens.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            latestMessage.isEmpty
+                                ? 'No message preview'
+                                : latestMessage,
+                            style: AppTypography.rowSecondary.copyWith(
+                              color: tokens.textSecondary,
+                            ),
+                            maxLines: isExpanded ? 3 : 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.status,
-                      style: AppTypography.rowSecondary
-                          .copyWith(color: tokens.textSecondary),
+                    const SizedBox(width: 8),
+                    Icon(
+                      isExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: tokens.inactiveIcon,
                     ),
                   ],
                 ),
               ),
+            ),
+            if (isExpanded) ...[
+              const SizedBox(height: 4),
+              Container(
+                decoration: BoxDecoration(
+                  color: tokens.secondarySurface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: tokens.outline),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Column(
+                  children: [
+                    for (var j = 0; j < group.entries.length; j++) ...[
+                      _MuteLogDetailRow(
+                        entry: group.entries[j],
+                        formatter: formatter,
+                        tokens: tokens,
+                      ),
+                      if (j != group.entries.length - 1)
+                        Divider(height: 10, color: tokens.outline),
+                    ],
+                  ],
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       );
-      if (i != visible.length - 1) {
+      if (i != groups.length - 1) {
         rows.add(Divider(height: 1, color: tokens.outline));
       }
     }
     return rows;
   }
+
+  List<_MuteEntryGroup> _groupMuteEntries(List<MuteLogEntry> entries) {
+    final grouped = <String, List<MuteLogEntry>>{};
+    final labels = <String, String>{};
+    for (final entry in entries) {
+      final key = entry.groupName.trim().toLowerCase();
+      final normalizedKey = key.isEmpty ? 'unknown' : key;
+      grouped.putIfAbsent(normalizedKey, () => <MuteLogEntry>[]).add(entry);
+      labels.putIfAbsent(normalizedKey, () {
+        final name = entry.groupName.trim();
+        return name.isEmpty ? 'Unknown' : name;
+      });
+    }
+
+    final result = grouped.entries
+        .map(
+          (e) => _MuteEntryGroup(
+            senderKey: e.key,
+            senderName: labels[e.key] ?? 'Unknown',
+            entries: e.value..sort((a, b) => b.timestamp.compareTo(a.timestamp)),
+          ),
+        )
+        .toList();
+    result.sort((a, b) => b.entries.first.timestamp.compareTo(a.entries.first.timestamp));
+    return result;
+  }
+}
+
+class _MuteLogDetailRow extends StatelessWidget {
+  final MuteLogEntry entry;
+  final DateFormat formatter;
+  final AppColorTokens tokens;
+
+  const _MuteLogDetailRow({
+    required this.entry,
+    required this.formatter,
+    required this.tokens,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final message = entry.messageText.trim();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 46,
+          child: Text(
+            formatter.format(entry.timestamp),
+            style: AppTypography.rowSecondary.copyWith(
+              color: tokens.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            message.isEmpty ? 'No message preview' : message,
+            style: AppTypography.rowSecondary.copyWith(color: tokens.textPrimary),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MuteEntryGroup {
+  final String senderKey;
+  final String senderName;
+  final List<MuteLogEntry> entries;
+
+  const _MuteEntryGroup({
+    required this.senderKey,
+    required this.senderName,
+    required this.entries,
+  });
 }
 
 class _SurfaceCard extends StatelessWidget {

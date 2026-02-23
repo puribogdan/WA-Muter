@@ -31,6 +31,11 @@ class MuteLogProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   List<MuteLogEntry> get todayEntries => _todayEntries;
 
+  Future<void> clearToday() async {
+    await _service.clearToday();
+    await loadToday();
+  }
+
   Future<void> loadToday({bool initial = false}) async {
     if (_refreshInProgress && !initial) return;
     _refreshInProgress = true;
@@ -63,7 +68,8 @@ class MuteLogProvider extends ChangeNotifier {
     for (var i = 0; i < a.length; i++) {
       if (a[i].timestamp != b[i].timestamp ||
           a[i].groupName != b[i].groupName ||
-          a[i].status != b[i].status) {
+          a[i].status != b[i].status ||
+          a[i].messageText != b[i].messageText) {
         return true;
       }
     }
