@@ -205,6 +205,6 @@ class MuteSchedule {
 
   @override
   String toString() {
-    return 'MuteSchedule(id: $id, name: $name, time: ${getFormattedTime()}, days: ${daysSummary}, groups: ${groups.length}, enabled: $enabled)';
+    return 'MuteSchedule(id: $id, name: $name, time: ${getFormattedTime()}, days: $daysSummary, groups: ${groups.length}, enabled: $enabled)';
   }
 }

@@ -1,75 +1,129 @@
 import 'package:flutter/material.dart';
 
+import 'design_tokens.dart';
+export 'design_tokens.dart';
+
 @immutable
 class AppColorTokens extends ThemeExtension<AppColorTokens> {
+  final Color primary;
+  final Color secondary;
+  final Color accent;
+  final Color accentLight;
   final Color background;
-  final Color cardSurface;
-  final Color secondarySurface;
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color outline;
-  final Color primaryAccent;
+  final Color surface;
+  final Color surface2;
+  final Color divider;
+  final Color muted;
+  final Color chartGrid;
   final Color success;
-  final Color inactiveIcon;
+  final Color successContainer;
+  final Color warning;
+  final Color warningContainer;
+  final Color danger;
+  final Color dangerContainer;
 
   const AppColorTokens({
+    required this.primary,
+    required this.secondary,
+    required this.accent,
+    required this.accentLight,
     required this.background,
-    required this.cardSurface,
-    required this.secondarySurface,
-    required this.textPrimary,
-    required this.textSecondary,
-    required this.outline,
-    required this.primaryAccent,
+    required this.surface,
+    required this.surface2,
+    required this.divider,
+    required this.muted,
+    required this.chartGrid,
     required this.success,
-    required this.inactiveIcon,
+    required this.successContainer,
+    required this.warning,
+    required this.warningContainer,
+    required this.danger,
+    required this.dangerContainer,
   });
 
   static const light = AppColorTokens(
-    background: Color(0xFFF6F7FB),
-    cardSurface: Color(0xFFFFFFFF),
-    secondarySurface: Color(0xFFF1F3F7),
-    textPrimary: Color(0xFF111827),
-    textSecondary: Color(0xFF6B7280),
-    outline: Color(0xFFE5E7EB),
-    primaryAccent: Color(0xFF2563EB),
-    success: Color(0xFF22C55E),
-    inactiveIcon: Color(0xFF9CA3AF),
+    primary: AppColors.lightPrimary,
+    secondary: AppColors.lightSecondary,
+    accent: AppColors.lightAccent,
+    accentLight: AppColors.lightAccentLight,
+    background: AppColors.lightBackground,
+    surface: AppColors.lightSurface,
+    surface2: AppColors.lightChartGrid,
+    divider: AppColors.lightDivider,
+    muted: AppColors.lightMuted,
+    chartGrid: AppColors.lightChartGrid,
+    success: AppColors.lightSuccess,
+    successContainer: Color(0xFFF0FDF4),
+    warning: AppColors.lightWarning,
+    warningContainer: AppColors.lightWarningContainer,
+    danger: AppColors.lightDanger,
+    dangerContainer: AppColors.lightDangerContainer,
   );
 
   static const dark = AppColorTokens(
-    background: Color(0xFF0B1220),
-    cardSurface: Color(0xFF111827),
-    secondarySurface: Color(0xFF0F172A),
-    textPrimary: Color(0xFFE5E7EB),
-    textSecondary: Color(0xFF9CA3AF),
-    outline: Color(0xFF1F2937),
-    primaryAccent: Color(0xFF3B82F6),
-    success: Color(0xFF3B82F6),
-    inactiveIcon: Color(0xFF64748B),
+    primary: AppColors.darkPrimary,
+    secondary: AppColors.darkSecondary,
+    accent: AppColors.darkAccent,
+    accentLight: AppColors.darkAccentLight,
+    background: AppColors.darkBackground,
+    surface: AppColors.darkSurface,
+    surface2: AppColors.darkSurface2,
+    divider: AppColors.darkDivider,
+    muted: AppColors.darkMuted,
+    chartGrid: AppColors.darkChartGrid,
+    success: AppColors.darkSuccess,
+    successContainer: AppColors.darkSuccessContainer,
+    warning: AppColors.darkWarning,
+    warningContainer: AppColors.darkWarningContainer,
+    danger: AppColors.darkDanger,
+    dangerContainer: AppColors.darkDangerContainer,
   );
+
+  // Backward-compatible aliases for existing screens/widgets.
+  Color get textPrimary => primary;
+  Color get textSecondary => secondary;
+  Color get cardSurface => surface;
+  Color get secondarySurface => surface2;
+  Color get outline => divider;
+  Color get primaryAccent => accent;
+  Color get inactiveIcon => muted;
 
   @override
   AppColorTokens copyWith({
+    Color? primary,
+    Color? secondary,
+    Color? accent,
+    Color? accentLight,
     Color? background,
-    Color? cardSurface,
-    Color? secondarySurface,
-    Color? textPrimary,
-    Color? textSecondary,
-    Color? outline,
-    Color? primaryAccent,
+    Color? surface,
+    Color? surface2,
+    Color? divider,
+    Color? muted,
+    Color? chartGrid,
     Color? success,
-    Color? inactiveIcon,
+    Color? successContainer,
+    Color? warning,
+    Color? warningContainer,
+    Color? danger,
+    Color? dangerContainer,
   }) {
     return AppColorTokens(
+      primary: primary ?? this.primary,
+      secondary: secondary ?? this.secondary,
+      accent: accent ?? this.accent,
+      accentLight: accentLight ?? this.accentLight,
       background: background ?? this.background,
-      cardSurface: cardSurface ?? this.cardSurface,
-      secondarySurface: secondarySurface ?? this.secondarySurface,
-      textPrimary: textPrimary ?? this.textPrimary,
-      textSecondary: textSecondary ?? this.textSecondary,
-      outline: outline ?? this.outline,
-      primaryAccent: primaryAccent ?? this.primaryAccent,
+      surface: surface ?? this.surface,
+      surface2: surface2 ?? this.surface2,
+      divider: divider ?? this.divider,
+      muted: muted ?? this.muted,
+      chartGrid: chartGrid ?? this.chartGrid,
       success: success ?? this.success,
-      inactiveIcon: inactiveIcon ?? this.inactiveIcon,
+      successContainer: successContainer ?? this.successContainer,
+      warning: warning ?? this.warning,
+      warningContainer: warningContainer ?? this.warningContainer,
+      danger: danger ?? this.danger,
+      dangerContainer: dangerContainer ?? this.dangerContainer,
     );
   }
 
@@ -77,78 +131,136 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
   AppColorTokens lerp(ThemeExtension<AppColorTokens>? other, double t) {
     if (other is! AppColorTokens) return this;
     return AppColorTokens(
+      primary: Color.lerp(primary, other.primary, t)!,
+      secondary: Color.lerp(secondary, other.secondary, t)!,
+      accent: Color.lerp(accent, other.accent, t)!,
+      accentLight: Color.lerp(accentLight, other.accentLight, t)!,
       background: Color.lerp(background, other.background, t)!,
-      cardSurface: Color.lerp(cardSurface, other.cardSurface, t)!,
-      secondarySurface: Color.lerp(secondarySurface, other.secondarySurface, t)!,
-      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
-      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
-      outline: Color.lerp(outline, other.outline, t)!,
-      primaryAccent: Color.lerp(primaryAccent, other.primaryAccent, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      surface2: Color.lerp(surface2, other.surface2, t)!,
+      divider: Color.lerp(divider, other.divider, t)!,
+      muted: Color.lerp(muted, other.muted, t)!,
+      chartGrid: Color.lerp(chartGrid, other.chartGrid, t)!,
       success: Color.lerp(success, other.success, t)!,
-      inactiveIcon: Color.lerp(inactiveIcon, other.inactiveIcon, t)!,
+      successContainer: Color.lerp(successContainer, other.successContainer, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      warningContainer:
+          Color.lerp(warningContainer, other.warningContainer, t)!,
+      danger: Color.lerp(danger, other.danger, t)!,
+      dangerContainer: Color.lerp(dangerContainer, other.dangerContainer, t)!,
     );
   }
 }
 
-class AppRadii {
-  static const double card = 16;
-  static const double button = 14;
-  static const double pill = 999;
-}
-
-class AppSpacing {
-  static const double pagePadding = 16;
-  static const EdgeInsets cardPadding =
-      EdgeInsets.symmetric(horizontal: 14, vertical: 16);
-  static const double cardGap = 12;
-  static const double rowGap = 10;
-}
-
-class AppTypography {
-  static const TextStyle title = TextStyle(
-    fontSize: 28,
-    fontWeight: FontWeight.w700,
-    height: 1.2,
-    fontFamily: 'Inter',
-    fontFamilyFallback: ['Roboto'],
-  );
-
-  static const TextStyle cardTitle = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    fontFamily: 'Inter',
-    fontFamilyFallback: ['Roboto'],
-  );
-
-  static const TextStyle cardSubtitle = TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w500,
-    fontFamily: 'Inter',
-    fontFamilyFallback: ['Roboto'],
-  );
-
-  static const TextStyle sectionHeader = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w700,
-    fontFamily: 'Inter',
-    fontFamilyFallback: ['Roboto'],
-  );
-
-  static const TextStyle rowPrimary = TextStyle(
-    fontSize: 15,
-    fontWeight: FontWeight.w600,
-    fontFamily: 'Inter',
-    fontFamilyFallback: ['Roboto'],
-  );
-
-  static const TextStyle rowSecondary = TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w500,
-    fontFamily: 'Inter',
-    fontFamilyFallback: ['Roboto'],
-  );
-}
-
 extension AppTokenContext on BuildContext {
   AppColorTokens get tokens => Theme.of(this).extension<AppColorTokens>()!;
+  bool get isDarkTheme => Theme.of(this).brightness == Brightness.dark;
+}
+
+/// Reusable visual helpers for incremental adoption on existing widgets.
+class AppDecorations {
+  AppDecorations._();
+
+  static BoxDecoration card(BuildContext context) {
+    final tokens = context.tokens;
+    return BoxDecoration(
+      color: tokens.surface,
+      borderRadius: BorderRadius.circular(AppRadii.card),
+      boxShadow: AppShadows.soft(context.isDarkTheme),
+    );
+  }
+
+  static BoxDecoration listRow(
+    BuildContext context, {
+    bool disabled = false,
+  }) {
+    final tokens = context.tokens;
+    return BoxDecoration(
+      color: disabled ? tokens.surface.withOpacity(0.7) : tokens.surface,
+      borderRadius: BorderRadius.circular(AppRadii.listRow),
+      boxShadow: AppShadows.soft(context.isDarkTheme),
+    );
+  }
+
+  static BoxDecoration searchFieldContainer(
+    BuildContext context, {
+    bool focused = false,
+  }) {
+    final tokens = context.tokens;
+    return BoxDecoration(
+      color: tokens.surface,
+      borderRadius: BorderRadius.circular(AppRadii.input),
+      boxShadow: [
+        ...AppShadows.soft(context.isDarkTheme),
+        if (focused)
+          BoxShadow(
+            offset: const Offset(0, 0),
+            blurRadius: 12,
+            spreadRadius: 0,
+            color: tokens.accent.withOpacity(0.20),
+          ),
+      ],
+    );
+  }
+
+  static BoxDecoration iconButtonCircle(BuildContext context) {
+    final tokens = context.tokens;
+    return BoxDecoration(
+      color: tokens.surface,
+      shape: BoxShape.circle,
+      boxShadow: AppShadows.soft(context.isDarkTheme),
+    );
+  }
+
+  static BoxDecoration pill(BuildContext context) {
+    final tokens = context.tokens;
+    return BoxDecoration(
+      color: context.isDarkTheme ? tokens.chartGrid : AppColors.lightChartGrid,
+      borderRadius: BorderRadius.circular(AppRadii.pill),
+    );
+  }
+
+  static BoxDecoration statusBubble(
+    BuildContext context, {
+    required Color bg,
+  }) {
+    return BoxDecoration(
+      color: bg,
+      shape: BoxShape.circle,
+    );
+  }
+}
+
+class AppInputStyles {
+  AppInputStyles._();
+
+  static InputDecoration search(
+    BuildContext context, {
+    required String hintText,
+    Widget? prefixIcon,
+  }) {
+    final tokens = context.tokens;
+    return InputDecoration(
+      hintText: hintText,
+      prefixIcon: prefixIcon,
+      filled: true,
+      fillColor: tokens.surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      hintStyle: Theme.of(
+        context,
+      ).textTheme.bodyMedium?.copyWith(color: tokens.muted),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        borderSide: BorderSide(color: tokens.divider),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        borderSide: BorderSide(color: tokens.accent, width: 1.4),
+      ),
+    );
+  }
 }

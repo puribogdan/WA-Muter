@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/models/mute_schedule.dart';
+import '../theme/app_tokens.dart';
 
 class ScheduleCard extends StatelessWidget {
   final MuteSchedule schedule;
@@ -16,16 +17,28 @@ class ScheduleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: ListTile(
-        onTap: onTap,
-        title: Text(schedule.name),
-        subtitle: Text(
-          '${schedule.daysSummary}  ${schedule.getFormattedTime()}\n${schedule.groups.length} groups',
-        ),
-        isThreeLine: true,
-        trailing: Switch(
-          value: schedule.enabled,
-          onChanged: onToggle,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: ListTile(
+          onTap: onTap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.listRow),
+          ),
+          title: Text(
+            schedule.name,
+            style: AppTypography.cardTitle.copyWith(color: context.tokens.primary),
+          ),
+          subtitle: Text(
+            '${schedule.daysSummary}  ${schedule.getFormattedTime()}\n${schedule.groups.length} groups',
+            style: AppTypography.secondaryBody.copyWith(
+              color: context.tokens.secondary,
+            ),
+          ),
+          isThreeLine: true,
+          trailing: Switch(
+            value: schedule.enabled,
+            onChanged: onToggle,
+          ),
         ),
       ),
     );

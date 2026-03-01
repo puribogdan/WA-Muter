@@ -9,9 +9,9 @@ import 'core/services/storage_service.dart';
 import 'core/services/time_check_service.dart';
 import 'core/models/mute_schedule.dart';
 import 'core/constants.dart';
-import 'screens/groups_screen.dart';
+import 'screens/app_shell_screen.dart';
 import 'screens/schedule_screen.dart';
-import 'screens/permission_screen.dart';
+import 'screens/permissions_screen.dart';
 import 'providers/groups_provider.dart';
 import 'providers/schedule_provider.dart';
 
@@ -30,16 +30,16 @@ class WhatsAppSchedulerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ScheduleProvider()),
       ],
       child: MaterialApp(
-        title: 'WhatsApp Scheduler',
+        title: 'ChatMuter',
         theme: ThemeData(
           primarySwatch: Colors.green,
           useMaterial3: true,
         ),
         home: const MonitoringScreen(),
         routes: {
-          '/groups': (context) => const GroupsScreen(),
+          '/groups': (context) => const AppShellScreen(),
           '/schedule': (context) => const ScheduleScreen(),
-          '/permissions': (context) => const PermissionScreen(),
+          '/permissions': (context) => PermissionsScreen(onFinish: () {}),
         },
         builder: (context, child) {
           return MediaQuery(
@@ -201,7 +201,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
         print('[MonitoringScreen] Building with schedule: ${scheduleProvider.hasSchedule}');
         return Scaffold(
           appBar: AppBar(
-            title: const Text('WhatsApp Scheduler'),
+            title: const Text('ChatMuter'),
             backgroundColor: Colors.green,
             foregroundColor: Colors.white,
           ),

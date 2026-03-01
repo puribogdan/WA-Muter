@@ -101,17 +101,31 @@ object NotificationBlocker {
 
     private fun titleMatchesAnyGroup(title: String, groups: List<String>): Boolean {
         val normalizedTitle = normalizeText(title)
+        val emojiInsensitiveTitle = normalizeEmojiInsensitive(title)
         return groups.any { group ->
             val normalizedGroup = normalizeText(group)
-            normalizedGroup.isNotEmpty() && matchesGroupTitle(normalizedTitle, normalizedGroup)
+            if (normalizedGroup.isEmpty()) return@any false
+
+            // 1) Exact/current normalization path (preserves emoji)
+            if (matchesGroupTitle(normalizedTitle, normalizedGroup)) return@any true
+
+            // 2) Emoji-insensitive fallback so users can type only the readable text
+            val emojiInsensitiveGroup = normalizeEmojiInsensitive(group)
+            emojiInsensitiveGroup.isNotEmpty() &&
+                matchesGroupTitle(emojiInsensitiveTitle, emojiInsensitiveGroup)
         }
     }
 
     private fun matchesGroupTitle(normalizedTitle: String, normalizedGroup: String): Boolean {
-        if (normalizedTitle == normalizedGroup) return true
-        if (normalizedTitle.startsWith("$normalizedGroup:")) return true
-        if (normalizedTitle.startsWith("$normalizedGroup (")) return true
-        if (normalizedTitle.contains(" in $normalizedGroup")) return true
+        val title = canonicalizeForMatch(normalizedTitle)
+        val group = canonicalizeForMatch(normalizedGroup)
+        if (group.isEmpty()) return false
+
+        if (title == group) return true
+        if (title.startsWith("$group:")) return true
+        if (title.startsWith("$group(")) return true
+        if (title.contains(" in $group")) return true
+        if (title.contains(" $group:")) return true
         return false
     }
 
@@ -119,6 +133,29 @@ object NotificationBlocker {
         return value.trim()
             .lowercase()
             .replace(Regex("\\s+"), " ")
+    }
+
+    private fun normalizeEmojiInsensitive(value: String): String {
+        return value
+            .trim()
+            .lowercase()
+            // Remove emoji variation selectors and zero-width joiner.
+            .replace(Regex("[\\uFE0E\\uFE0F\\u200D]"), "")
+            // Remove common emoji/symbol presentation chars and symbol modifiers.
+            .replace(Regex("[\\p{So}\\p{Sk}]"), " ")
+            // Remove regional indicator symbols used for flag emoji.
+            .replace(Regex("[\\x{1F1E6}-\\x{1F1FF}]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
+    private fun canonicalizeForMatch(value: String): String {
+        return value
+            .replace(Regex("\\s*:\\s*"), ":")
+            .replace(Regex("\\s*\\(\\s*"), "(")
+            .replace(Regex("\\s*\\)\\s*"), ")")
+            .replace(Regex("\\s+"), " ")
+            .trim()
     }
 
     private fun isScheduleActiveAt(schedule: ScheduleData, now: Calendar): Boolean {

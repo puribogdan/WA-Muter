@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 
 class StatusPill extends StatelessWidget {
   final String label;
@@ -12,19 +13,17 @@ class StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ok ? Colors.green : Colors.orange;
+    final tokens = context.tokens;
+    final bg = ok ? tokens.successContainer : tokens.warningContainer;
+    final fg = ok ? tokens.success : tokens.warning;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: AppDecorations.pill(context).copyWith(color: bg),
       child: Text(
         label,
-        style: TextStyle(
-          color: color.shade700,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
+        style: AppTypography.micro.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

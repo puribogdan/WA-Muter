@@ -9,12 +9,16 @@ class ScheduleService {
   Future<List<MuteSchedule>> getAllSchedules() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_schedulesKey);
-    if (raw == null || raw.isEmpty) return <MuteSchedule>[];
+    if (raw == null || raw.isEmpty) {
+      await NativeBridge.saveSchedules(const <Map<String, dynamic>>[]);
+      return <MuteSchedule>[];
+    }
 
     final decoded = jsonDecode(raw) as List<dynamic>;
     final schedules = decoded
         .map((e) => MuteSchedule.fromJson(e as Map<String, dynamic>))
         .toList();
+    await NativeBridge.saveSchedules(schedules.map((e) => e.toJson()).toList());
     return schedules;
   }
 
