@@ -1,3 +1,6 @@
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.dsl.LibraryExtension
+
 allprojects {
     repositories {
         google()
@@ -14,6 +17,20 @@ rootProject.layout.buildDirectory.value(newBuildDir)
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
+
+    // Force a modern compileSdk for all Android modules (app + plugins).
+    // This fixes AAPT errors like missing android:attr/lStar from older plugin defaults.
+    pluginManager.withPlugin("com.android.application") {
+        extensions.configure<ApplicationExtension> {
+            compileSdk = 35
+        }
+    }
+
+    pluginManager.withPlugin("com.android.library") {
+        extensions.configure<LibraryExtension> {
+            compileSdk = 35
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {
